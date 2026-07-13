@@ -140,20 +140,7 @@
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* Pulse animation for the loader */
-.p-dl-pulse-dot {
-  width: 8px;
-  height: 8px;
-  background-color: #e60023 !important;
-  border-radius: 50% !important;
-  animation: p-pulse 1.2s infinite ease-in-out !important;
-}
 
-@keyframes p-pulse {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  50% { transform: scale(1.3); opacity: 1; }
-  100% { transform: scale(0.8); opacity: 0.5; }
-}
 
 /* Progress Bar styling */
 .p-dl-progress-track {
@@ -227,3 +214,50 @@
 .p-no-scroll {
   overflow: hidden !important;
 }
+
+/* 3. Interactive Pin Checkbox Selection */
+.p-pin-checkbox {
+  position: absolute !important;
+  top: 12px !important;
+  left: 12px !important;
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  background-color: #e60023 !important; /* Pinterest Red */
+  border: 2px solid #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  z-index: 99999 !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3) !important;
+  transition: background-color 0.2s ease, transform 0.15s ease !important;
+}
+
+.p-pin-checkbox:hover {
+  transform: scale(1.1) !important;
+}
+
+.p-pin-checkbox.unchecked {
+  background-color: rgba(30, 30, 30, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.p-pin-checkbox svg {
+  width: 14px !important;
+  height: 14px !important;
+  fill: #ffffff !important;
+  pointer-events: none !important;
+}
+
+.p-pin-checkbox.unchecked svg {
+  display: none !important; /* Hide checkmark when deselected */
+}
+
+/* Semi-transparent deselected state */
+.p-deselected-pin {
+  opacity: 0.35 !important;
+  filter: grayscale(60%) !important;
+  transition: opacity 0.3s ease, filter 0.3s ease !important;
+}
+

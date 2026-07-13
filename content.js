@@ -134,9 +134,8 @@ function createDownloaderOverlay() {
     <div class="p-dl-body">
       <div class="p-dl-board-info">Board: <strong>${boardName}</strong></div>
       <div class="p-dl-stats-row">
-        <span>Pins Found: <strong id="p-dl-pin-count">0</strong></span>
+        <span>Selected: <strong id="p-dl-pin-count">0 / 0</strong></span>
         <div class="p-dl-loader-container" id="p-dl-loader">
-          <div class="p-dl-pulse-dot"></div>
           <span>Scanning board...</span>
         </div>
       </div>
@@ -145,7 +144,7 @@ function createDownloaderOverlay() {
       </div>
     </div>
     <div class="p-dl-footer">
-      <button class="p-dl-btn-primary" id="p-dl-start-btn">Download All Pins</button>
+      <button class="p-dl-btn-primary" id="p-dl-start-btn">Download 0 Pins</button>
       <button class="p-dl-btn-secondary" id="p-dl-stop-btn">Stop & Close</button>
     </div>
   `;
@@ -166,23 +165,40 @@ function createDownloaderOverlay() {
   const startBtn = document.getElementById('p-dl-start-btn');
   startBtn.addEventListener('click', () => {
     stopScanning();
-    if (pinsMap.size === 0) {
-      alert('No pins found to download!');
+    const selectedPins = Array.from(pinsMap.values()).filter(p => p.selected);
+    if (selectedPins.length === 0) {
+      alert('No pins selected to download!');
       return;
     }
     
     // Disable buttons during download
     startBtn.disabled = true;
-    startBtn.textContent = 'Preparing downloads...';
+    startBtn.textContent = 'Preparing...';
     stopBtn.disabled = true;
     
     // Trigger bulk download in background worker
     chrome.runtime.sendMessage({
       action: 'download_pins',
       boardName: boardName,
-      pins: Array.from(pinsMap.values())
+      pins: selectedPins
     });
   });
+}
+
+function updateStatsUI() {
+  const total = pinsMap.size;
+  const selected = Array.from(pinsMap.values()).filter(p => p.selected).length;
+  
+  const countEl = document.getElementById('p-dl-pin-count');
+  if (countEl) {
+    countEl.textContent = `${selected} / ${total}`;
+  }
+  
+  const startBtn = document.getElementById('p-dl-start-btn');
+  if (startBtn && !startBtn.disabled) {
+    startBtn.textContent = `Download ${selected} Pins`;
+    startBtn.disabled = selected === 0;
+  }
 }
 
 function startScanning() {
@@ -212,15 +228,51 @@ function startScanning() {
         pinsMap.set(originalUrl, {
           id: pinId,
           title: title,
-          url: originalUrl
+          url: originalUrl,
+          selected: true // Selected by default
         });
+      }
+      
+      // Inject checkbox overlay for selection if not already present
+      if (link.dataset.hasCheckbox !== 'true') {
+        link.dataset.hasCheckbox = 'true';
+        link.style.position = 'relative';
+        
+        const checkbox = document.createElement('div');
+        checkbox.className = 'p-pin-checkbox';
+        checkbox.innerHTML = `
+          <svg viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+          </svg>
+        `;
+        
+        // Handle checkbox toggle
+        checkbox.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          
+          const pinData = pinsMap.get(originalUrl);
+          if (pinData) {
+            pinData.selected = !pinData.selected;
+            if (pinData.selected) {
+              checkbox.classList.remove('unchecked');
+              link.classList.remove('p-deselected-pin');
+            } else {
+              checkbox.classList.add('unchecked');
+              link.classList.add('p-deselected-pin');
+            }
+            updateStatsUI();
+          }
+        });
+        
+        link.appendChild(checkbox);
       }
     });
     
-    const currentCount = pinsMap.size;
-    const countEl = document.getElementById('p-dl-pin-count');
-    if (countEl) countEl.textContent = currentCount;
+    // Update count display
+    updateStatsUI();
     
+    const currentCount = pinsMap.size;
     // Auto-stop scanning if we scroll multiple times without discovering new pins
     if (currentCount === lastPinsCount) {
       noNewPinsCount++;
