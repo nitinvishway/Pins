@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Pinterest Bulk Board Downloader",
+  "version": "1.0",
+  "description": "Bulk download pins from any Pinterest board directly from card hovers.",
+  "permissions": [
+    "downloads",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://*.pinterest.com/*",
+    "https://i.pinimg.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.pinterest.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ]
+}
