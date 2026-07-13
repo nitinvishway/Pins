@@ -100,6 +100,7 @@ let noNewPinsCount = 0;
 let lastPinsCount = 0;
 let boardName = 'Pinterest Board';
 let isDownloaderActive = false;
+let isDownloading = false;
 
 function initBulkDownloader() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -157,6 +158,7 @@ function createDownloaderOverlay() {
   document.getElementById('p-dl-close-btn').addEventListener('click', () => {
     stopScanning();
     isDownloaderActive = false;
+    isDownloading = false;
     removeAllCheckboxes();
     overlay.remove();
   });
@@ -165,6 +167,7 @@ function createDownloaderOverlay() {
   stopBtn.addEventListener('click', () => {
     stopScanning();
     isDownloaderActive = false;
+    isDownloading = false;
     removeAllCheckboxes();
     window.close();
   });
@@ -179,6 +182,7 @@ function createDownloaderOverlay() {
     }
     
     // Disable buttons during download
+    isDownloading = true;
     startBtn.disabled = true;
     startBtn.textContent = 'Preparing...';
     stopBtn.disabled = true;
@@ -202,7 +206,7 @@ function updateStatsUI() {
   }
   
   const startBtn = document.getElementById('p-dl-start-btn');
-  if (startBtn && !startBtn.disabled) {
+  if (startBtn && !isDownloading) {
     startBtn.textContent = `Download ${selected} Pins`;
     startBtn.disabled = selected === 0;
   }
