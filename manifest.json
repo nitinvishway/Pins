@@ -1,8 +1,20 @@
 {
   "manifest_version": 3,
-  "name": "Pinterest Bulk Board Downloader",
+  "name": "PinVault",
   "version": "1.0",
   "description": "Bulk download pins from any Pinterest board directly from card hovers.",
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icon.png",
+      "48": "icon.png",
+      "128": "icon.png"
+    }
+  },
   "permissions": [
     "downloads",
     "activeTab"
