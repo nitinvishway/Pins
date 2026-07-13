@@ -381,13 +381,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // --- Initialize content scripts ---
 
-// Set up MutationObserver to dynamically inject buttons and checkboxes on DOM changes
+let debounceTimeout = null;
+
+// Set up MutationObserver to dynamically inject buttons and checkboxes on DOM changes safely
 const observer = new MutationObserver(() => {
-  injectDownloadButtons();
-  if (isDownloaderActive) {
-    injectCheckboxes();
-  }
+  // Throttle updates using debounce to maintain 60 FPS and avoid CPU hogging
+  if (debounceTimeout) return;
+  
+  debounceTimeout = setTimeout(() => {
+    // Temporarily disconnect the observer to avoid infinite loops from our own DOM modifications
+    observer.disconnect();
+    
+    injectDownloadButtons();
+    if (isDownloaderActive) {
+      injectCheckboxes();
+    }
+    
+    // Re-observe once our changes are finished
+    observer.observe(document.body, { childList: true, subtree: true });
+    debounceTimeout = null;
+  }, 150); // 150ms throttle delay
 });
+
+// Start observing
 observer.observe(document.body, { childList: true, subtree: true });
 
 // Initial run
