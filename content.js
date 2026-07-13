@@ -370,9 +370,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
       const startBtn = document.getElementById('p-dl-start-btn');
       if (startBtn) {
-        startBtn.textContent = 'Finished!';
+        startBtn.textContent = 'Completed!';
         startBtn.disabled = true;
-        startBtn.style.backgroundColor = '#4caf50';
+        startBtn.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+        startBtn.style.color = '#4caf50';
       }
       const stopBtn = document.getElementById('p-dl-stop-btn');
       if (stopBtn) {
