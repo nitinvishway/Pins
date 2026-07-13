@@ -218,7 +218,7 @@
 /* 3. Interactive Pin Checkbox Selection */
 .p-pin-checkbox {
   position: absolute !important;
-  top: 12px !important;
+  bottom: 12px !important;
   left: 12px !important;
   width: 24px !important;
   height: 24px !important;
