@@ -99,10 +99,13 @@ let scrollInterval = null;
 let noNewPinsCount = 0;
 let lastPinsCount = 0;
 let boardName = 'Pinterest Board';
+let isDownloaderActive = false;
 
 function initBulkDownloader() {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('download') !== 'bulk') return;
+  
+  isDownloaderActive = true;
   
   // Extract board name from h1 header or document title
   const h1 = document.querySelector('h1');
@@ -153,12 +156,16 @@ function createDownloaderOverlay() {
   // Add listeners
   document.getElementById('p-dl-close-btn').addEventListener('click', () => {
     stopScanning();
+    isDownloaderActive = false;
+    removeAllCheckboxes();
     overlay.remove();
   });
   
   const stopBtn = document.getElementById('p-dl-stop-btn');
   stopBtn.addEventListener('click', () => {
     stopScanning();
+    isDownloaderActive = false;
+    removeAllCheckboxes();
     window.close();
   });
   
@@ -201,6 +208,95 @@ function updateStatsUI() {
   }
 }
 
+function injectCheckboxes() {
+  if (!isDownloaderActive) return;
+  
+  const pinLinks = document.querySelectorAll('a[href*="/pin/"]');
+  pinLinks.forEach(link => {
+    const href = link.getAttribute('href');
+    const idMatch = href.match(/\/pin\/(\d+)/);
+    if (!idMatch) return;
+    const pinId = idMatch[1];
+    
+    const img = link.querySelector('img');
+    if (!img || !img.src) return;
+    
+    const originalUrl = img.src.replace(/\/\d+x\//, '/originals/');
+    const title = img.alt || `pin_${pinId}`;
+    
+    // 1. Ensure pin details exist in the master map
+    if (!pinsMap.has(originalUrl)) {
+      pinsMap.set(originalUrl, {
+        id: pinId,
+        title: title,
+        url: originalUrl,
+        selected: true // default to selected
+      });
+    }
+    
+    const pinData = pinsMap.get(originalUrl);
+    
+    // 2. Inject or re-inject checkbox if missing
+    let checkbox = link.querySelector('.p-pin-checkbox');
+    if (!checkbox) {
+      link.style.position = 'relative';
+      
+      checkbox = document.createElement('div');
+      checkbox.className = 'p-pin-checkbox';
+      checkbox.innerHTML = `
+        <svg viewBox="0 0 24 24">
+          <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
+        </svg>
+      `;
+      
+      // Checkbox click handler
+      checkbox.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        pinData.selected = !pinData.selected;
+        if (pinData.selected) {
+          checkbox.classList.remove('unchecked');
+          link.classList.remove('p-deselected-pin');
+        } else {
+          checkbox.classList.add('unchecked');
+          link.classList.add('p-deselected-pin');
+        }
+        updateStatsUI();
+      });
+      
+      link.appendChild(checkbox);
+    }
+    
+    // 3. Synchronize element visual state with stored data (critical for React DOM updates)
+    if (pinData.selected) {
+      checkbox.classList.remove('unchecked');
+      link.classList.remove('p-deselected-pin');
+    } else {
+      checkbox.classList.add('unchecked');
+      link.classList.add('p-deselected-pin');
+    }
+  });
+  
+  // Refresh stats counts
+  updateStatsUI();
+}
+
+function removeAllCheckboxes() {
+  const checkboxes = document.querySelectorAll('.p-pin-checkbox');
+  checkboxes.forEach(cb => cb.remove());
+  
+  const deselected = document.querySelectorAll('.p-deselected-pin');
+  deselected.forEach(el => {
+    el.classList.remove('p-deselected-pin');
+  });
+  
+  const links = document.querySelectorAll('a[data-has-checkbox]');
+  links.forEach(l => {
+    l.removeAttribute('data-has-checkbox');
+  });
+}
+
 function startScanning() {
   scrollInterval = setInterval(() => {
     // Scroll page down smoothly to load more items
@@ -209,68 +305,8 @@ function startScanning() {
       behavior: 'smooth'
     });
     
-    // Find all pin image elements
-    const pinLinks = document.querySelectorAll('a[href*="/pin/"]');
-    pinLinks.forEach(link => {
-      const href = link.getAttribute('href');
-      const idMatch = href.match(/\/pin\/(\d+)/);
-      if (!idMatch) return;
-      const pinId = idMatch[1];
-      
-      const img = link.querySelector('img');
-      if (!img || !img.src) return;
-      
-      // Clean up the URL to get the original high-resolution version
-      const originalUrl = img.src.replace(/\/\d+x\//, '/originals/');
-      const title = img.alt || `pin_${pinId}`;
-      
-      if (!pinsMap.has(originalUrl)) {
-        pinsMap.set(originalUrl, {
-          id: pinId,
-          title: title,
-          url: originalUrl,
-          selected: true // Selected by default
-        });
-      }
-      
-      // Inject checkbox overlay for selection if not already present
-      if (link.dataset.hasCheckbox !== 'true') {
-        link.dataset.hasCheckbox = 'true';
-        link.style.position = 'relative';
-        
-        const checkbox = document.createElement('div');
-        checkbox.className = 'p-pin-checkbox';
-        checkbox.innerHTML = `
-          <svg viewBox="0 0 24 24">
-            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path>
-          </svg>
-        `;
-        
-        // Handle checkbox toggle
-        checkbox.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          
-          const pinData = pinsMap.get(originalUrl);
-          if (pinData) {
-            pinData.selected = !pinData.selected;
-            if (pinData.selected) {
-              checkbox.classList.remove('unchecked');
-              link.classList.remove('p-deselected-pin');
-            } else {
-              checkbox.classList.add('unchecked');
-              link.classList.add('p-deselected-pin');
-            }
-            updateStatsUI();
-          }
-        });
-        
-        link.appendChild(checkbox);
-      }
-    });
-    
-    // Update count display
-    updateStatsUI();
+    // Inject checkboxes on the newly loaded elements
+    injectCheckboxes();
     
     const currentCount = pinsMap.size;
     // Auto-stop scanning if we scroll multiple times without discovering new pins
@@ -345,9 +381,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // --- Initialize content scripts ---
 
-// Set up MutationObserver to dynamically find board cards
+// Set up MutationObserver to dynamically inject buttons and checkboxes on DOM changes
 const observer = new MutationObserver(() => {
   injectDownloadButtons();
+  if (isDownloaderActive) {
+    injectCheckboxes();
+  }
 });
 observer.observe(document.body, { childList: true, subtree: true });
 
