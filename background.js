@@ -17,11 +17,21 @@ async function downloadSequence(boardName, pins, tabId) {
   
   for (let i = 0; i < total; i++) {
     const pin = pins[i];
-    const extension = getExtension(pin.url);
-    // Use the title or fallback to the pin ID / index
-    const identifier = pin.title || pin.id || `pin_${i + 1}`;
-    const sanitizedTitle = sanitizeFilename(identifier);
-    const filename = `Pinterest_Downloads/${sanitizedBoardName}/${sanitizedTitle}.${extension}`;
+    
+    // Extract the original filename from the CDN URL (e.g. hash.jpg)
+    let urlFilename = '';
+    try {
+      const urlObj = new URL(pin.url);
+      urlFilename = urlObj.pathname.split('/').pop();
+    } catch (e) {}
+    
+    // Fallback if URL extraction fails
+    if (!urlFilename) {
+      const extension = getExtension(pin.url);
+      urlFilename = `pin_${pin.id || i + 1}.${extension}`;
+    }
+    
+    const filename = `Pinterest_Downloads/${sanitizedBoardName}/${urlFilename}`;
     
     try {
       await downloadFile(pin.url, filename);
