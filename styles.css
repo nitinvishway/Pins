@@ -331,3 +331,48 @@
   pointer-events: none !important;
 }
 
+/* 5. Mini Single Pin Hover Download Button (Positioned Beside Share Button) */
+.p-single-pin-wrapper {
+  position: relative !important;
+}
+
+.p-single-pin-dl-btn {
+  opacity: 0;
+  visibility: hidden;
+  position: absolute !important;
+  bottom: 12px !important;
+  right: 60px !important; /* Positioned beside the share/send button at bottom-right */
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  background-color: #ffffff !important;
+  color: #111111 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.15s ease, background-color 0.2s ease, color 0.2s ease !important;
+  z-index: 9999 !important;
+  border: none !important;
+  padding: 0 !important;
+}
+
+.p-single-pin-wrapper:hover .p-single-pin-dl-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.p-single-pin-dl-btn:hover {
+  background-color: #e60023 !important;
+  color: #ffffff !important;
+  transform: scale(1.08) !important;
+}
+
+.p-single-pin-dl-btn svg {
+  width: 18px !important;
+  height: 18px !important;
+  fill: currentColor !important;
+  pointer-events: none !important;
+}
+

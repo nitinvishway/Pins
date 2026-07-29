@@ -101,9 +101,11 @@ let lastPinsCount = 0;
 let boardName = 'Pinterest Board';
 let isDownloaderActive = false;
 let isDownloading = false;
+let isFeedMode = false;
 
 function initBulkDownloader() {
   injectFloatingLauncher();
+  injectSinglePinButtons();
   
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('download') === 'bulk') {
@@ -134,6 +136,9 @@ function activateBulkDownloader() {
     boardName = document.title.split('|')[0].trim() || 'Pinterest Feed';
   }
 
+  // Detect if this is a Home Feed / Search Feed (where pins default to deselected)
+  isFeedMode = (path === '/' || path.includes('/homefeed') || boardName === 'Home Feed' || Boolean(searchQuery));
+
   // Reset state for new scan session
   pinsMap.clear();
   noNewPinsCount = 0;
@@ -143,6 +148,65 @@ function activateBulkDownloader() {
   createDownloaderOverlay();
   startScanning();
   injectCheckboxes();
+}
+
+function injectSinglePinButtons() {
+  const pinLinks = document.querySelectorAll('a[href*="/pin/"]');
+  pinLinks.forEach(link => {
+    if (link.dataset.hasSinglePinDownload === 'true') return;
+    const href = link.getAttribute('href');
+    const idMatch = href.match(/\/pin\/(\d+)/);
+    if (!idMatch) return;
+    const pinId = idMatch[1];
+    
+    const img = link.querySelector('img');
+    if (!img || !img.src) return;
+
+    link.dataset.hasSinglePinDownload = 'true';
+
+    // Find closest container wrapper
+    let cardWrapper = link;
+    if (link.parentElement && link.parentElement.tagName !== 'BODY') {
+      link.parentElement.classList.add('p-single-pin-wrapper');
+      cardWrapper = link.parentElement;
+    } else {
+      link.classList.add('p-single-pin-wrapper');
+    }
+
+    const dlBtn = document.createElement('button');
+    dlBtn.className = 'p-single-pin-dl-btn';
+    dlBtn.title = 'Download High-Res Pin';
+    dlBtn.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"></path>
+      </svg>
+    `;
+
+    dlBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const originalUrl = img.src.replace(/\/\d+x\//, '/originals/');
+      const title = img.alt || `pin_${pinId}`;
+
+      // Quick visual download indicator feedback
+      dlBtn.style.backgroundColor = '#4caf50';
+      dlBtn.style.color = '#ffffff';
+
+      chrome.runtime.sendMessage({
+        action: 'download_pins',
+        boardName: 'Quick Downloads',
+        pins: [{ id: pinId, title: title, url: originalUrl, selected: true }]
+      });
+
+      setTimeout(() => {
+        dlBtn.style.backgroundColor = '';
+        dlBtn.style.color = '';
+      }, 1500);
+    });
+
+    cardWrapper.appendChild(dlBtn);
+  });
 }
 
 function injectFloatingLauncher() {
@@ -316,13 +380,13 @@ function injectCheckboxes() {
     const originalUrl = img.src.replace(/\/\d+x\//, '/originals/');
     const title = img.alt || `pin_${pinId}`;
     
-    // 1. Ensure pin details exist in the master map
+    // 1. Ensure pin details exist in the master map (Feed mode defaults to deselected)
     if (!pinsMap.has(originalUrl)) {
       pinsMap.set(originalUrl, {
         id: pinId,
         title: title,
         url: originalUrl,
-        selected: true // default to selected
+        selected: isFeedMode ? false : true
       });
     }
     
@@ -352,7 +416,9 @@ function injectCheckboxes() {
           link.classList.remove('p-deselected-pin');
         } else {
           checkbox.classList.add('unchecked');
-          link.classList.add('p-deselected-pin');
+          if (!isFeedMode) {
+            link.classList.add('p-deselected-pin');
+          }
         }
         updateStatsUI();
       });
@@ -366,7 +432,9 @@ function injectCheckboxes() {
       link.classList.remove('p-deselected-pin');
     } else {
       checkbox.classList.add('unchecked');
-      link.classList.add('p-deselected-pin');
+      if (!isFeedMode) {
+        link.classList.add('p-deselected-pin');
+      }
     }
   });
   
@@ -488,6 +556,7 @@ const observer = new MutationObserver(() => {
     observer.disconnect();
     
     injectDownloadButtons();
+    injectSinglePinButtons();
     injectFloatingLauncher();
     if (isDownloaderActive) {
       injectCheckboxes();
@@ -505,5 +574,6 @@ observer.observe(document.body, { childList: true, subtree: true });
 // Initial run
 setTimeout(() => {
   injectDownloadButtons();
+  injectSinglePinButtons();
   initBulkDownloader();
 }, 1500); // Give the page a moment to load and hydrate its state
