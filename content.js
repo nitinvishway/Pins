@@ -172,7 +172,10 @@ function injectFloatingLauncher() {
   document.body.appendChild(fab);
 }
 
+let isAutoScrolling = true;
+
 function createDownloaderOverlay() {
+  isAutoScrolling = true;
   const overlay = document.createElement('div');
   overlay.className = 'p-dl-overlay';
   overlay.innerHTML = `
@@ -191,6 +194,11 @@ function createDownloaderOverlay() {
         <div class="p-dl-loader-container" id="p-dl-loader">
           <span>Scanning board...</span>
         </div>
+      </div>
+      <div class="p-dl-action-row">
+        <button class="p-dl-btn-sub" id="p-dl-select-all-btn">Select All</button>
+        <button class="p-dl-btn-sub" id="p-dl-deselect-all-btn">Deselect All</button>
+        <button class="p-dl-btn-sub" id="p-dl-toggle-scroll-btn">Pause Auto-Scroll</button>
       </div>
       <div class="p-dl-progress-track">
         <div class="p-dl-progress-bar" id="p-dl-progress-bar"></div>
@@ -225,6 +233,33 @@ function createDownloaderOverlay() {
     if (fab) fab.style.display = 'flex';
   });
   
+  document.getElementById('p-dl-select-all-btn').addEventListener('click', () => {
+    pinsMap.forEach(pin => { pin.selected = true; });
+    injectCheckboxes();
+    updateStatsUI();
+  });
+
+  document.getElementById('p-dl-deselect-all-btn').addEventListener('click', () => {
+    pinsMap.forEach(pin => { pin.selected = false; });
+    injectCheckboxes();
+    updateStatsUI();
+  });
+
+  const toggleScrollBtn = document.getElementById('p-dl-toggle-scroll-btn');
+  toggleScrollBtn.addEventListener('click', () => {
+    if (isAutoScrolling) {
+      isAutoScrolling = false;
+      stopScanning(false);
+      toggleScrollBtn.textContent = 'Resume Auto-Scroll';
+    } else {
+      isAutoScrolling = true;
+      startScanning();
+      toggleScrollBtn.textContent = 'Pause Auto-Scroll';
+      const loader = document.getElementById('p-dl-loader');
+      if (loader) loader.innerHTML = '<span>Scanning feed...</span>';
+    }
+  });
+
   const startBtn = document.getElementById('p-dl-start-btn');
   startBtn.addEventListener('click', () => {
     stopScanning();
@@ -389,6 +424,8 @@ function stopScanning(finished = false) {
   if (loader) {
     if (finished) {
       loader.innerHTML = '<span>Scan complete</span>';
+    } else if (!isAutoScrolling) {
+      loader.innerHTML = '<span>Auto-scroll paused</span>';
     } else {
       loader.innerHTML = '<span>Scan stopped</span>';
     }
