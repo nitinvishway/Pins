@@ -136,7 +136,7 @@ function activateBulkDownloader() {
     boardName = document.title.split('|')[0].trim() || 'Pinterest Feed';
   }
 
-  // Detect if this is a Home Feed / Search Feed (where pins default to deselected)
+  // Detect if this is a Home Feed / Search Feed (where pins default to deselected and manual scroll)
   isFeedMode = (path === '/' || path.includes('/homefeed') || boardName === 'Home Feed' || Boolean(searchQuery));
 
   // Reset state for new scan session
@@ -144,9 +144,19 @@ function activateBulkDownloader() {
   noNewPinsCount = 0;
   lastPinsCount = 0;
 
-  // Create overlay & start scanning
+  // Create overlay
   createDownloaderOverlay();
-  startScanning();
+
+  // On feed pages (Home Feed), default to manual scroll; on board pages, auto-scroll by default
+  if (!isFeedMode) {
+    isAutoScrolling = true;
+    startScanning();
+  } else {
+    isAutoScrolling = false;
+    const loader = document.getElementById('p-dl-loader');
+    if (loader) loader.innerHTML = '<span>Manual scroll mode</span>';
+  }
+
   injectCheckboxes();
 }
 
@@ -236,12 +246,12 @@ function injectFloatingLauncher() {
   document.body.appendChild(fab);
 }
 
-let isAutoScrolling = true;
+let isAutoScrolling = false;
 
 function createDownloaderOverlay() {
-  isAutoScrolling = true;
   const overlay = document.createElement('div');
   overlay.className = 'p-dl-overlay';
+  const toggleBtnLabel = isFeedMode ? 'Start Auto-Scroll' : 'Pause Auto-Scroll';
   overlay.innerHTML = `
     <div class="p-dl-header">
       <h3 class="p-dl-title">Bulk Downloader</h3>
@@ -262,7 +272,7 @@ function createDownloaderOverlay() {
       <div class="p-dl-action-row">
         <button class="p-dl-btn-sub" id="p-dl-select-all-btn">Select All</button>
         <button class="p-dl-btn-sub" id="p-dl-deselect-all-btn">Deselect All</button>
-        <button class="p-dl-btn-sub" id="p-dl-toggle-scroll-btn">Pause Auto-Scroll</button>
+        <button class="p-dl-btn-sub" id="p-dl-toggle-scroll-btn">${toggleBtnLabel}</button>
       </div>
       <div class="p-dl-progress-track">
         <div class="p-dl-progress-bar" id="p-dl-progress-bar"></div>
