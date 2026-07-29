@@ -103,24 +103,73 @@ let isDownloaderActive = false;
 let isDownloading = false;
 
 function initBulkDownloader() {
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('download') !== 'bulk') return;
+  injectFloatingLauncher();
   
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('download') === 'bulk') {
+    activateBulkDownloader();
+  }
+}
+
+function activateBulkDownloader() {
+  if (isDownloaderActive) return;
   isDownloaderActive = true;
   
-  // Extract board name from h1 header or document title
+  const fab = document.getElementById('p-fab-launcher');
+  if (fab) fab.style.display = 'none';
+  
+  // Extract board name, search query, or feed title
+  const urlParams = new URLSearchParams(window.location.search);
+  const searchQuery = urlParams.get('q');
+  const path = window.location.pathname;
+
   const h1 = document.querySelector('h1');
   if (h1 && h1.textContent.trim()) {
     boardName = h1.textContent.trim();
+  } else if (searchQuery) {
+    boardName = `Search - ${searchQuery}`;
+  } else if (path === '/' || path.includes('/homefeed')) {
+    boardName = 'Home Feed';
   } else {
-    boardName = document.title.split('|')[0].trim() || 'Pinterest Board';
+    boardName = document.title.split('|')[0].trim() || 'Pinterest Feed';
+  }
+
+  // Reset state for new scan session
+  pinsMap.clear();
+  noNewPinsCount = 0;
+  lastPinsCount = 0;
+
+  // Create overlay & start scanning
+  createDownloaderOverlay();
+  startScanning();
+  injectCheckboxes();
+}
+
+function injectFloatingLauncher() {
+  if (document.getElementById('p-fab-launcher')) return;
+  
+  const fab = document.createElement('button');
+  fab.id = 'p-fab-launcher';
+  fab.className = 'p-fab-launcher';
+  fab.title = 'Bulk Download Pins on this page';
+  fab.innerHTML = `
+    <svg viewBox="0 0 24 24">
+      <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"></path>
+    </svg>
+    <span>Bulk Download</span>
+  `;
+  
+  if (isDownloaderActive) {
+    fab.style.display = 'none';
   }
   
-  // Create beautiful overlay
-  createDownloaderOverlay();
+  fab.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    activateBulkDownloader();
+  });
   
-  // Start scrolling & parsing loop
-  startScanning();
+  document.body.appendChild(fab);
 }
 
 function createDownloaderOverlay() {
@@ -136,7 +185,7 @@ function createDownloaderOverlay() {
       </button>
     </div>
     <div class="p-dl-body">
-      <div class="p-dl-board-info">Board: <strong>${boardName}</strong></div>
+      <div class="p-dl-board-info">Feed/Board: <strong>${boardName}</strong></div>
       <div class="p-dl-stats-row">
         <span>Selected: <strong id="p-dl-pin-count">0 / 0</strong></span>
         <div class="p-dl-loader-container" id="p-dl-loader">
@@ -161,6 +210,8 @@ function createDownloaderOverlay() {
     isDownloading = false;
     removeAllCheckboxes();
     overlay.remove();
+    const fab = document.getElementById('p-fab-launcher');
+    if (fab) fab.style.display = 'flex';
   });
   
   const stopBtn = document.getElementById('p-dl-stop-btn');
@@ -169,7 +220,9 @@ function createDownloaderOverlay() {
     isDownloaderActive = false;
     isDownloading = false;
     removeAllCheckboxes();
-    window.close();
+    overlay.remove();
+    const fab = document.getElementById('p-fab-launcher');
+    if (fab) fab.style.display = 'flex';
   });
   
   const startBtn = document.getElementById('p-dl-start-btn');
@@ -378,7 +431,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const stopBtn = document.getElementById('p-dl-stop-btn');
       if (stopBtn) {
         stopBtn.disabled = false;
-        stopBtn.textContent = 'Close Tab';
+        stopBtn.textContent = 'Close';
       }
     }
   }
@@ -398,6 +451,7 @@ const observer = new MutationObserver(() => {
     observer.disconnect();
     
     injectDownloadButtons();
+    injectFloatingLauncher();
     if (isDownloaderActive) {
       injectCheckboxes();
     }

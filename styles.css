@@ -261,3 +261,43 @@
   transition: opacity 0.3s ease, filter 0.3s ease !important;
 }
 
+/* 4. Floating Action Launcher Button (FAB) */
+.p-fab-launcher {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  height: 44px !important;
+  padding: 0 20px !important;
+  border-radius: 22px !important;
+  background-color: #e60023 !important; /* Pinterest Red */
+  color: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 6px 20px rgba(230, 0, 35, 0.45) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  z-index: 2147483646 !important;
+  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.p-fab-launcher:hover {
+  background-color: #ad001a !important;
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 8px 24px rgba(230, 0, 35, 0.6) !important;
+}
+
+.p-fab-launcher:active {
+  transform: translateY(1px) scale(0.98) !important;
+}
+
+.p-fab-launcher svg {
+  width: 20px !important;
+  height: 20px !important;
+  fill: #ffffff !important;
+  pointer-events: none !important;
+}
+
